@@ -1,5 +1,17 @@
 #include<stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include"../include/utils.h"
+
+float** create_2d_matrix(int m, int n){
+    float *storage = (float*) calloc(m * n * sizeof(float));
+    float **matrix = (float**) malloc(m * sizeof(float*));
+
+    for (int i = 0; i < m; i++){
+        matrix[i] = &(storage[i*n]);
+    }
+    return matrix;
+}
 
 void read_graph_from_file_1(char *filename, int *N, double ***hyperlink_matrix){
     /*
@@ -10,6 +22,28 @@ void read_graph_from_file_1(char *filename, int *N, double ***hyperlink_matrix){
     this 2D array needs to be allocated inside the function
 
     */
+   N = 0
+
+    printf("Creating graph from small file...\n")
+
+    FILE *file fopen(filename, "r");
+
+    if (file == NULL) {
+        perror("Failed to open file, file is NULL");
+    }
+
+    char line[MAX_LINE_LENGTH];
+
+    while (fgets(line, sizeof(line), file)){
+        N++;
+    }
+
+    printf("Number of webpages in small file: %d\n", N);
+    rewind(file);
+
+    // first: loop that counts how many "from's" a webpage has - which makes out it's element contribution
+    // second: nested loop what uses hyperlink_matrix[to][from] = 1 / webpage_outs[from] to set the elements in the matri
+
 }
 
 void read_graph_from_file_2(char *filename, int *N, int **row_ptr, int **col_idx, double **val){
