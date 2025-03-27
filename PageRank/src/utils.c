@@ -3,6 +3,7 @@
 #include"../include/utils.h"
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 #define MAX_LINE_LENGTH 1024
 
@@ -28,7 +29,6 @@ void read_graph_from_file_1(char *filename, int *N, double ***hyperlink_matrix){
     printf("\n\nCreating graph from small file...\n");
 
     FILE *file = fopen(filename, "r");
-    int nodes;
     int *edges_out;
 
     if (file == NULL) {
@@ -46,7 +46,6 @@ void read_graph_from_file_1(char *filename, int *N, double ***hyperlink_matrix){
             printf("\n%s", line);
             *N = atoi(&line[9]);
             edges_out = (int*) calloc(*N, sizeof(int));
-            nodes = atoi(&line[19]);
             *hyperlink_matrix = create_2d_matrix(*N, *N);
         }} 
 
@@ -107,7 +106,6 @@ void read_graph_from_file_2(char *filename, int *N, int **row_ptr, int **col_idx
 
     char line[MAX_LINE_LENGTH];
     int *edges_out;
-    int nodes = 0;
     int from, to;
     int total_edges = 0;
 
@@ -116,15 +114,17 @@ void read_graph_from_file_2(char *filename, int *N, int **row_ptr, int **col_idx
         if (line[0] == '#') {
             if (line[2] == 'N') {
                 *N = atoi(&line[9]);
-                printf("Number of nodes: %d\n", *N);
+                printf("\ntotal nodes: %d", *N);
                 edges_out = (int*) calloc(*N, sizeof(int)); 
             }
         } else if (line[0] != '#') {
             sscanf(line, "%d %d", &from, &to);
             edges_out[from] += 1;  
-            total_edges += from;
+            total_edges += 1;
         }
     }
+
+    printf("\ntotal edges: %d", total_edges);
 
     *row_ptr = (int*) malloc((*N + 1) * sizeof(int)); 
     *col_idx = (int*) malloc(total_edges * sizeof(int)); 
@@ -134,15 +134,14 @@ void read_graph_from_file_2(char *filename, int *N, int **row_ptr, int **col_idx
 
     int current_edge = 0;
     rewind(file);
-    fscanf(file, "%*[^\n]\n");  // Skip first line
-    fscanf(file, "%*[^\n]\n");  // Skip second line
-    fscanf(file, "%*[^\n]\n");  // Skip third line
-    fscanf(file, "%*[^\n]\n");  // Skip fourth line
+    fscanf(file, "%*[^\n]\n");
+    fscanf(file, "%*[^\n]\n");  
+    fscanf(file, "%*[^\n]\n");  
+    fscanf(file, "%*[^\n]\n");  
 
     while (fscanf(file, "%d %d", &from, &to) == 2) {
-        // Fill col_idx and val for each non-zero element
         (*col_idx)[current_edge] = to;
-        (*val)[current_edge] = 1.0 / edges_out[from];  // Assuming it's the same as in your hyperlink matrix logic
+        (*val)[current_edge] = 1.0 / edges_out[from];  
         current_edge++;
     }
 
@@ -180,8 +179,37 @@ void PageRank_iterations_1(int N, double **hyperlink_matrix, double d, double ep
     
     The computed PageRank scores are to be
     contained in the pre-allocated 1D array scores.
-    
     */
+
+   double N_inv = 1/N; //  N is the number of pages 
+   double one_minus_d = (1 - d);
+   double temp_x = N_inv, term;
+   double score_delta = 10;
+
+   for (int i = 0; i < N; i++){
+    scores[i] = N_inv;
+    }
+
+    // assuming there are no dangling pages and W is zero
+    while (score_delta > epsilon){
+        for (int i = 0; i < N; i++){
+            temp_x = scores[i];
+            scores[i] = one_minus_d * N_inv;
+            term = 0;
+
+            for (int j = 0; j < N; j++){
+                term +=  temp_x * hyperlink_matrix[i][j];
+            }
+
+            scores[i] += d*term;
+            score_delta = fabs(temp_x - scores[i]);
+        }
+    }
+
+    printf("\nPageRank algorithm finished!\nscore delta is %f, deemed less than eta threshold: %f", score_delta, epsilon);
+    for (int i = 0; i < N; i++){
+        printf("\nWebpage: %d with score: %f", i, scores[i]);
+    }
 }
 
 /*
@@ -199,11 +227,33 @@ void PageRank_iterations_2(int N, int *row_ptr, int *col_idx, double *val, doubl
     */
 }
 
+int comp (const void * elem1, const void * elem2){
+    // found here: https://stackoverflow.com/questions/1787996/c-library-function-to-perform-sort
+    int f = *((int*)elem1);
+    int s = *((int*)elem2);
+    if (f > s) return  1;
+    if (f < s) return -1;
+    return 0;
+}
 
 void top_n_webpages(int N, double *scores, int n){
     /*
     This function should go through the computed PageRank score vector scores and print out the top n webpages, 
     with both their scores and webpage indices.
 
+    SCORES AND WEBPAGE INDICES....
     */
+   int *indices = malloc(N * sizeof(int));
+   for (int i = 0; i < N; i++) {
+        indices[i] = i;
+    }
+
+    qsort_r(scores, N, sizeof(double), comp, scores);
+
+    printf("\nTop %d webpages based on PageRank scores:", n);
+    for (int i = 0; i < n; i++) {
+        printf("\nRank %d: Webpage %d Score: %.6f", i + 1, indices[i], scores[indices[i]]);
+    }
+
+    free(indices);
 }
