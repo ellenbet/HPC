@@ -269,6 +269,7 @@ pyrightconfig.json
 bin/
 *.csv
 data/
+bin/
 
 
 # End of https://www.toptal.com/developers/gitignore/api/macos,python,c++,visualstudiocode
