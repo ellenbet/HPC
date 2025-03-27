@@ -8,22 +8,41 @@ to read the large web graph file, followed by PageRank iterations2 and top n web
 Proper comments and output info (using printf) should be provided
 
 */
+#include<stdio.h>
+#include "include/utils.h"
+#include <stdlib.h>
+#include <string.h>
+
 
 int main(int argc, char *argv[]){
-    if(argc != 5){
+    printf("\n\nNUMBER OF ARGUMENTS PROVIDED:\n argc: %d\n", argc);
+    for (int i = 0; i < argc; i++) {
+        printf("Argument %d: %s\n", i, argv[i]);
+    }
+    if(argc != 6){
         perror("Number of arguments provided does not match number of arguments needed: small_filename, large_filename, d, eta, n");
         return 1;
     }
 
     // all command line inputs in order: small_filename, large_filename, d, eta, n
-    char s_file[] = argv[0], l_file[] = argv[1];
-    double d = atof(argv[2]), eta = atof(argv[3]);
-    int n = atoi(argv[4]);
+    char *s_file = argv[1];
+    char *l_file = argv[2];
+    float d = atof(argv[3]);
+    float eta = atof(argv[4]);
+    int n = atoi(argv[5]);
 
-    printf("pagerank algorithm starting..\nconfirming parameters:\nsmall filname: %c\nlarge filename: %c\ndampening constand d: %f\neta threshold: %f\nn webpages: %d\n", s_file, l_file, d, eta, n);
+    printf("\nPageRank algorithm starting..\nconfirming parameters:\n\nsmall filname: %s\nlarge  filename: %s\ndampening constand d: %f\neta threshold: %f\nn webpages: %d\n", s_file, l_file, d, eta, n);
 
+    double** hyperlink_mat;
+    
+    int N = 0;
+    char *small_filename = "data/small_example.txt";
     // read graph from file here for small file 
+    read_graph_from_file_1(small_filename, &N, &hyperlink_mat);
 
+    int *col_idx, *row_ptr;
+    double *val;
+    read_graph_from_file_2(small_filename, &N, &row_ptr, &col_idx, &val);
     // pagerank iterations 1 here for small file
 
     // top n webpages here for small file 

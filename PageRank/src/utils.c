@@ -1,11 +1,14 @@
-#include<stdio.h>
+#include <stdio.h>
+#include <errno.h>
+#include"../include/utils.h"
 #include <stdlib.h>
 #include <string.h>
-#include"../include/utils.h"
 
-float** create_2d_matrix(int m, int n){
-    float *storage = (float*) calloc(m * n * sizeof(float));
-    float **matrix = (float**) malloc(m * sizeof(float*));
+#define MAX_LINE_LENGTH 1024
+
+double** create_2d_matrix(int m, int n){
+    double *storage = (double*) calloc(m * n, sizeof(double));
+    double **matrix = (double**) calloc(m, sizeof(double*));
 
     for (int i = 0; i < m; i++){
         matrix[i] = &(storage[i*n]);
@@ -22,27 +25,63 @@ void read_graph_from_file_1(char *filename, int *N, double ***hyperlink_matrix){
     this 2D array needs to be allocated inside the function
 
     */
-   N = 0
+    printf("\n\nCreating graph from small file...\n");
 
-    printf("Creating graph from small file...\n")
-
-    FILE *file fopen(filename, "r");
+    FILE *file = fopen(filename, "r");
+    int nodes;
+    int *edges_out;
 
     if (file == NULL) {
-        perror("Failed to open file, file is NULL");
+        perror("\nFailed to open file, file is NULL");
     }
 
     char line[MAX_LINE_LENGTH];
+    // first: loop that counts how many "from's" a webpage has - which makes out it's element contribution
+    // Read data from file -> fromNode, toNode
+    int from = 0, to = 0;
 
     while (fgets(line, sizeof(line), file)){
-        N++;
+        if(line[0] == '#'){
+            if(line[2] == 'N'){
+            printf("\n%s", line);
+            *N = atoi(&line[9]);
+            edges_out = (int*) calloc(*N, sizeof(int));
+            nodes = atoi(&line[19]);
+            *hyperlink_matrix = create_2d_matrix(*N, *N);
+        }} 
+
+        else if (line[0] != '#') {
+            sscanf(line, "%d %d", &from, &to);
+            edges_out[from] += 1;
+            printf("\nFrom node: %d to node: %d - node %d has a total of %d edges so far", from, to, from, edges_out[from]);
+        }
     }
 
-    printf("Number of webpages in small file: %d\n", N);
     rewind(file);
+    // Skipping the first four lines
+    fscanf(file, "%*[^\n]\n");
+    fscanf(file, "%*[^\n]\n");
+    fscanf(file, "%*[^\n]\n");
+    fscanf(file, "%*[^\n]\n");
+ 
+    while (fscanf(file, "%d %d", &from, &to) == 2){
+        if (edges_out[from] != 0){
+            (*hyperlink_matrix)[to][from] = 1./edges_out[from];
+        } else {
+            (*hyperlink_matrix)[to][from] = 0.;
+        }
+    }
 
-    // first: loop that counts how many "from's" a webpage has - which makes out it's element contribution
-    // second: nested loop what uses hyperlink_matrix[to][from] = 1 / webpage_outs[from] to set the elements in the matri
+    printf("\n\nResulting hyperlink matrix:\n");
+    for (int i = 0; i < *N; i++){
+        printf("\n %d:   " , i);
+        for (int j = 0; j < *N; j++){
+            printf("  %f  " , (*hyperlink_matrix)[i][j]);
+        }
+    }
+
+    free(edges_out);
+    fclose(file);  // Close the file
 
 }
 
@@ -57,7 +96,81 @@ void read_graph_from_file_2(char *filename, int *N, int **row_ptr, int **col_idx
     links.
 
     */
+
+    printf("\n\nCreating CRS graph...\n");
+
+    FILE *file = fopen(filename, "r");
+    if (file == NULL) {
+        perror("\nFailed to open file, file is NULL");
+        return;
+    }
+
+    char line[MAX_LINE_LENGTH];
+    int *edges_out;
+    int nodes = 0;
+    int from, to;
+    int total_edges = 0;
+
+
+    while (fgets(line, sizeof(line), file)) {
+        if (line[0] == '#') {
+            if (line[2] == 'N') {
+                *N = atoi(&line[9]);
+                printf("Number of nodes: %d\n", *N);
+                edges_out = (int*) calloc(*N, sizeof(int)); 
+            }
+        } else if (line[0] != '#') {
+            sscanf(line, "%d %d", &from, &to);
+            edges_out[from] += 1;  
+            total_edges += from;
+        }
+    }
+
+    *row_ptr = (int*) malloc((*N + 1) * sizeof(int)); 
+    *col_idx = (int*) malloc(total_edges * sizeof(int)); 
+    *val = (double*) malloc(total_edges * sizeof(double));
+
+    (*row_ptr)[0] = 0;
+
+    int current_edge = 0;
+    rewind(file);
+    fscanf(file, "%*[^\n]\n");  // Skip first line
+    fscanf(file, "%*[^\n]\n");  // Skip second line
+    fscanf(file, "%*[^\n]\n");  // Skip third line
+    fscanf(file, "%*[^\n]\n");  // Skip fourth line
+
+    while (fscanf(file, "%d %d", &from, &to) == 2) {
+        // Fill col_idx and val for each non-zero element
+        (*col_idx)[current_edge] = to;
+        (*val)[current_edge] = 1.0 / edges_out[from];  // Assuming it's the same as in your hyperlink matrix logic
+        current_edge++;
+    }
+
+    for (int i = 1; i <= *N; i++) {
+        (*row_ptr)[i] = (*row_ptr)[i - 1] + edges_out[i - 1];
+    }
+
+    free(edges_out);
+
+    printf("\n\nResulting CRS format:\n");
+    for (int i = 0; i < *N + 1; i++) {
+        printf("row_ptr[%d] = %d\n", i, (*row_ptr)[i]);
+    }
+
+    printf("\ncol_idx: ");
+    for (int i = 0; i < total_edges; i++) {
+        printf("%d ", (*col_idx)[i]);
+    }
+
+    printf("\nval: ");
+    for (int i = 0; i < total_edges; i++) {
+        printf("%f ", (*val)[i]);
+    }
+    printf("\n");
+
+    fclose(file); 
 }
+
 
 void PageRank_iterations_1(int N, double **hyperlink_matrix, double d, double epsilon, double *scores){
     /*
