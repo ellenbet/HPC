@@ -181,32 +181,42 @@ void PageRank_iterations_1(int N, double **hyperlink_matrix, double d, double ep
     contained in the pre-allocated 1D array scores.
     */
 
-   double N_inv = 1/N; //  N is the number of pages 
+   double N_inv = 1./N; //  N is the number of pages 
    double one_minus_d = (1 - d);
-   double temp_x = N_inv, term;
-   double score_delta = 10;
+   double temp_xi = N_inv, temp_term, term;
+   double score_delta = 1.;
+   double max_score_delta = 0.5;
 
    for (int i = 0; i < N; i++){
     scores[i] = N_inv;
     }
 
     // assuming there are no dangling pages and W is zero
-    while (score_delta > epsilon){
+    while (max_score_delta > epsilon){
+        max_score_delta = 0;
+
         for (int i = 0; i < N; i++){
-            temp_x = scores[i];
-            scores[i] = one_minus_d * N_inv;
+            temp_xi =  scores[i];
+            temp_term = one_minus_d * N_inv;
             term = 0;
 
             for (int j = 0; j < N; j++){
-                term +=  temp_x * hyperlink_matrix[i][j];
+                term +=  scores[j] * hyperlink_matrix[i][j];
             }
 
-            scores[i] += d*term;
-            score_delta = fabs(temp_x - scores[i]);
+            scores[i] = d * term + temp_term;
+            score_delta = fabs(temp_xi - scores[i]);
+            //printf("\nx_i: %f", scores[i]);
+            //printf("\nprevious x_i: %f", temp_xi);
+            if (score_delta > max_score_delta){
+                max_score_delta = score_delta;
+            }
+            printf("\ndelta score: %f", score_delta);
+            printf("\nepsilon %f", epsilon);
         }
     }
 
-    printf("\nPageRank algorithm finished!\nscore delta is %f, deemed less than eta threshold: %f", score_delta, epsilon);
+    printf("\n\nPageRank algorithm finished!\nscore delta is %f, deemed less than eta threshold: %f", score_delta, epsilon);
     for (int i = 0; i < N; i++){
         printf("\nWebpage: %d with score: %f", i, scores[i]);
     }
@@ -227,32 +237,29 @@ void PageRank_iterations_2(int N, int *row_ptr, int *col_idx, double *val, doubl
     */
 }
 
-int comp (const void * elem1, const void * elem2){
+int comp (void *scores, const void * elem1, const void * elem2){
     // found here: https://stackoverflow.com/questions/1787996/c-library-function-to-perform-sort
-    int f = *((int*)elem1);
-    int s = *((int*)elem2);
-    if (f > s) return  1;
-    if (f < s) return -1;
+    double *score_array = (double *) scores;
+    int index1 = *(int *)elem1;
+    int index2 = *(int *)elem2;
+
+    if (score_array[index1] < score_array[index2]) return 1;  // Descending order
+    if (score_array[index1] > score_array[index2]) return -1;
     return 0;
 }
 
-void top_n_webpages(int N, double *scores, int n){
-    /*
-    This function should go through the computed PageRank score vector scores and print out the top n webpages, 
-    with both their scores and webpage indices.
-
-    SCORES AND WEBPAGE INDICES....
-    */
-   int *indices = malloc(N * sizeof(int));
-   for (int i = 0; i < N; i++) {
+void top_n_webpages(int N, double *scores, int n) {
+    int *indices = malloc(N * sizeof(int));
+    for (int i = 0; i < N; i++) {
         indices[i] = i;
     }
 
-    qsort_r(scores, N, sizeof(double), comp, scores);
+    // Using qsort_r to pass scores as context
+    qsort_r(indices, N, sizeof(int), scores, comp);
 
-    printf("\nTop %d webpages based on PageRank scores:", n);
+    printf("\n\nTop %d webpages based on PageRank scores:\n", n);
     for (int i = 0; i < n; i++) {
-        printf("\nRank %d: Webpage %d Score: %.6f", i + 1, indices[i], scores[indices[i]]);
+        printf("Ranked %d: Webpage %d with score: %.6f\n", i + 1, indices[i], scores[indices[i]]);
     }
 
     free(indices);

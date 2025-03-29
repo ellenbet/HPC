@@ -42,13 +42,13 @@ int main(int argc, char *argv[]){
 
     int *col_idx, *row_ptr;
     double *val;
-    int M = 0;
-    read_graph_from_file_2(small_filename, &M, &row_ptr, &col_idx, &val);
+    read_graph_from_file_2(small_filename, &N, &row_ptr, &col_idx, &val);
     // pagerank iterations 1 here for small file
-    double *scores = malloc(N * sizeof(double));
+    double *scores = calloc(N, sizeof(double));
     PageRank_iterations_1(N, hyperlink_mat, d, eta, scores);
 
     // top n webpages here for small file 
+    top_n_webpages(N, scores, 3);
 
     // repeat above here for large file
 
