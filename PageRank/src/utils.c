@@ -37,7 +37,6 @@ void read_graph_from_file_1(char *filename, int *N, double ***hyperlink_matrix){
 
     char line[MAX_LINE_LENGTH];
     // first: loop that counts how many "from's" a webpage has - which makes out it's element contribution
-    // Read data from file -> fromNode, toNode
     int from = 0, to = 0;
 
     while (fgets(line, sizeof(line), file)){
@@ -80,8 +79,7 @@ void read_graph_from_file_1(char *filename, int *N, double ***hyperlink_matrix){
     }
 
     free(edges_out);
-    rewind(file);
-    fclose(file);  // Close the file
+    fclose(file);
 
 }
 
@@ -138,11 +136,9 @@ void read_graph_from_file_2(char *filename, int *N, int **row_ptr, int **col_idx
         (*row_ptr)[i] = (*row_ptr)[i - 1] + edges_in[i - 1];
     }
 
-    // ** Reset edge counters for correct index placement in col_idx **
     int *current_pos = (int*) calloc(*N, sizeof(int));
     memcpy(current_pos, *row_ptr, *N * sizeof(int));
 
-    // ** Second Pass: Populate col_idx and val **
     rewind(file);
     fscanf(file, "%*[^\n]\n");
     fscanf(file, "%*[^\n]\n");  
@@ -152,8 +148,8 @@ void read_graph_from_file_2(char *filename, int *N, int **row_ptr, int **col_idx
     while (fscanf(file, "%d %d", &from, &to) == 2) {
         int index = current_pos[to];
         (*col_idx)[index] = from;
-        (*val)[index] = 1.0 / edges_out[from]; // Assign correct weight
-        current_pos[to]++; // Move to next position in col_idx
+        (*val)[index] = 1.0 / edges_out[from]; 
+        current_pos[to]++; 
     }
 
     free(edges_out);
