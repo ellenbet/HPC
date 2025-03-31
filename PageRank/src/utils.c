@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <omp.h>
 
 #define MAX_LINE_LENGTH 1024
 
@@ -153,6 +154,7 @@ void read_graph_from_file_2(char *filename, int *N, int **row_ptr, int **col_idx
     }
 
     free(edges_out);
+    free(edges_in);
 
     printf("\n\nResulting CRS format:\n");
     for (int i = 0; i < *N + 1; i++) {
@@ -182,7 +184,7 @@ void PageRank_iterations_1(int N, double **hyperlink_matrix, double d, double ep
 
    double N_inv = 1./N; //  N is the number of pages 
    double one_minus_d = (1 - d);
-   double temp_xi = N_inv, temp_term, term;
+   double temp_xi = N_inv, temp_term = one_minus_d * N_inv, term;
    double score_delta = 1.;
    double max_score_delta = 0.5;
    double *new_scores = calloc(N, sizeof(double));
@@ -197,7 +199,6 @@ void PageRank_iterations_1(int N, double **hyperlink_matrix, double d, double ep
 
         for (int i = 0; i < N; i++){
             temp_xi =  scores[i];
-            temp_term = one_minus_d * N_inv;
             term = 0;
 
             for (int j = 0; j < N; j++){
@@ -222,11 +223,6 @@ void PageRank_iterations_1(int N, double **hyperlink_matrix, double d, double ep
     }
 }
 
-/*
-
-The two functions below must be parallelized with OpenMP!
-
-*/
 
 void PageRank_iterations_2(int N, int *row_ptr, int *col_idx, double *val, double d, double epsilon, double *scores){
     /*
@@ -242,10 +238,14 @@ void PageRank_iterations_2(int N, int *row_ptr, int *col_idx, double *val, doubl
    double score_delta = 2.;
    double max_score_delta = 1.;
    double *new_scores = calloc(N, sizeof(double));
+   int threads = 5; //default 8 threads, no need to change this
+   omp_set_dynamic(0); 
+   omp_set_num_threads(threads); 
 
    for (int i = 0;  i < N; i++){
        scores[i] = N_inv;
    }
+   printf("\nAvailable threads: %d\n", omp_get_max_threads());
 
    while (max_score_delta > epsilon){
        max_score_delta = 0;
@@ -254,20 +254,19 @@ void PageRank_iterations_2(int N, int *row_ptr, int *col_idx, double *val, doubl
            temp_xi = scores[i];
            temp_term = one_minus_d * N_inv;
 
+           #pragma omp parallel for
            for (int j = row_ptr[i]; j < row_ptr[i + 1]; j++){
                new_scores[i] += scores[col_idx[j]] * val[j];
-               //printf("\nscores[col_idx[j]]: %f \tval[j]: %f \tterm: %f", scores[col_idx[j]], val[j], new_scores[i]);
+               int id = omp_get_thread_num();
+               printf("\nthread_id: %d", id);
            }
-           //printf("\ncalculation: d * term + temp_term: %f", d * new_scores[i] + temp_term);
-           //printf("\ncalculation: 0.85 * 0.125 + (1/N) * (1 - 0.85) : %f", 0.85 * 0.125 + (0.15/N));
            new_scores[i] = d * new_scores[i] + temp_term;
-           //printf("\n\nnew x_i: %f", new_scores[i]);
-           //printf("\tprevious x_i: %f", temp_xi);
            score_delta = fabs(temp_xi - new_scores[i]);
 
+           #pragma omp critical
            if (score_delta > max_score_delta){
-               max_score_delta = score_delta;
-           }
+            max_score_delta = score_delta;
+        }
        }
 
        printf("\nmax delta score: %f", max_score_delta);
@@ -296,6 +295,7 @@ int comp (void *scores, const void * elem1, const void * elem2){
 
 void top_n_webpages(int N, double *scores, int n) {
     int *indices = malloc(N * sizeof(int));
+    #pragma omp parallel for
     for (int i = 0; i < N; i++) {
         indices[i] = i;
     }
@@ -305,6 +305,7 @@ void top_n_webpages(int N, double *scores, int n) {
 
     printf("\n\nTop %d webpages based on PageRank scores:\n", n);
     for (int i = 0; i < n; i++) {
+        #pragma omp ordered
         printf("Ranked %d: Webpage %d with score: %.6f\n", i + 1, indices[i], scores[indices[i]]);
     }
 

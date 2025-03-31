@@ -4,8 +4,8 @@
 export C_INCLUDE_PATH = /opt/homebrew/include:/Library/Developer/CommandLineTools/usr/include
 
 # Compiler settings
-CC = gcc # Use GCC for C compilation
-CFLAGS = -std=c11 -Wall -I/opt/homebrew/include -I/Library/Developer/CommandLineTools/usr/include
+CC = gcc-14 # Use GCC for C compilation
+CFLAGS = -std=c11 -Wall -I/opt/homebrew/include -I/Library/Developer/CommandLineTools/usr/include -fopenmp
 #CFLAGS += -I/opt/homebrew/Cellar/gcc@12/12.4.0/lib/gcc/12/gcc/aarch64-apple-darwin21/12/include
 #CFLAGS += -I/opt/homebrew/Cellar/gcc@12/12.4.0/lib/gcc/12/gcc/aarch64-apple-darwin21/12/include-fixed
 # -fopenmp -I/opt/homebrew/opt/libomp/include  # Uncomment if needed
@@ -15,6 +15,7 @@ ifeq ($(shell uname), Darwin)
 	LDFLAGS = -L/opt/homebrew/lib -larmadillo -lblas -llapack
 	LDFLAGS += -L/opt/homebrew/opt/libomp/lib -lomp
 	CPPFLAGS += -I/opt/homebrew/opt/libomp/include 
+
 else
 	LDFLAGS = -L/usr/local/lib -larmadillo -lblas -llapack
 	LDFLAGS += -L/usr/lib/gcc/x86_64-linux-gnu/9 -lgomp
