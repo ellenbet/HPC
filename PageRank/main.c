@@ -50,6 +50,10 @@ int main(int argc, char *argv[]){
     // top n webpages here for small file 
     top_n_webpages(N, scores, 3);
 
+    // pagerank with crs for small file
+
+    PageRank_iterations_2(N, row_ptr, col_idx, val, d, eta, scores);
+
     // repeat above here for large file
 
 }

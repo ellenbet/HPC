@@ -80,6 +80,7 @@ void read_graph_from_file_1(char *filename, int *N, double ***hyperlink_matrix){
     }
 
     free(edges_out);
+    rewind(file);
     fclose(file);  // Close the file
 
 }
@@ -105,7 +106,7 @@ void read_graph_from_file_2(char *filename, int *N, int **row_ptr, int **col_idx
     }
 
     char line[MAX_LINE_LENGTH];
-    int *edges_out;
+    int *edges_out, *edges_in;
     int from, to;
     int total_edges = 0;
 
@@ -114,25 +115,34 @@ void read_graph_from_file_2(char *filename, int *N, int **row_ptr, int **col_idx
         if (line[0] == '#') {
             if (line[2] == 'N') {
                 *N = atoi(&line[9]);
-                printf("\ntotal nodes: %d", *N);
+                total_edges = atoi(&line[19]);
+                printf("\ntotal nodes: %d\ntotal edges: %d", *N, total_edges);
                 edges_out = (int*) calloc(*N, sizeof(int)); 
+                edges_in = (int*) calloc(*N, sizeof(int)); 
             }
         } else if (line[0] != '#') {
             sscanf(line, "%d %d", &from, &to);
-            edges_out[from] += 1;  
-            total_edges += 1;
+            edges_out[from] += 1;  // i changed this
+            edges_in[to] += 1;
         }
     }
-
-    printf("\ntotal edges: %d", total_edges);
 
     *row_ptr = (int*) malloc((*N + 1) * sizeof(int)); 
     *col_idx = (int*) malloc(total_edges * sizeof(int)); 
     *val = (double*) malloc(total_edges * sizeof(double));
 
     (*row_ptr)[0] = 0;
+    rewind(file);
 
-    int current_edge = 0;
+    for (int i = 1; i < *N + 1; i++) {
+        (*row_ptr)[i] = (*row_ptr)[i - 1] + edges_in[i - 1];
+    }
+
+    // ** Reset edge counters for correct index placement in col_idx **
+    int *current_pos = (int*) calloc(*N, sizeof(int));
+    memcpy(current_pos, *row_ptr, *N * sizeof(int));
+
+    // ** Second Pass: Populate col_idx and val **
     rewind(file);
     fscanf(file, "%*[^\n]\n");
     fscanf(file, "%*[^\n]\n");  
@@ -140,13 +150,10 @@ void read_graph_from_file_2(char *filename, int *N, int **row_ptr, int **col_idx
     fscanf(file, "%*[^\n]\n");  
 
     while (fscanf(file, "%d %d", &from, &to) == 2) {
-        (*col_idx)[current_edge] = to;
-        (*val)[current_edge] = 1.0 / edges_out[from];  
-        current_edge++;
-    }
-
-    for (int i = 1; i <= *N; i++) {
-        (*row_ptr)[i] = (*row_ptr)[i - 1] + edges_out[i - 1];
+        int index = current_pos[to];
+        (*col_idx)[index] = from;
+        (*val)[index] = 1.0 / edges_out[from]; // Assign correct weight
+        current_pos[to]++; // Move to next position in col_idx
     }
 
     free(edges_out);
@@ -156,14 +163,9 @@ void read_graph_from_file_2(char *filename, int *N, int **row_ptr, int **col_idx
         printf("row_ptr[%d] = %d\n", i, (*row_ptr)[i]);
     }
 
-    printf("\ncol_idx: ");
+    printf("\n\ncol_idx\tval");
     for (int i = 0; i < total_edges; i++) {
-        printf("%d ", (*col_idx)[i]);
-    }
-
-    printf("\nval: ");
-    for (int i = 0; i < total_edges; i++) {
-        printf("%f ", (*val)[i]);
+        printf("\n%d\t%f", (*col_idx)[i], (*val)[i]);
     }
     printf("\n");
 
@@ -180,12 +182,14 @@ void PageRank_iterations_1(int N, double **hyperlink_matrix, double d, double ep
     The computed PageRank scores are to be
     contained in the pre-allocated 1D array scores.
     */
+   printf("\n\nStarting PageRank algorithm for matrix format...");
 
    double N_inv = 1./N; //  N is the number of pages 
    double one_minus_d = (1 - d);
    double temp_xi = N_inv, temp_term, term;
    double score_delta = 1.;
    double max_score_delta = 0.5;
+   double *new_scores = calloc(N, sizeof(double));
 
    for (int i = 0; i < N; i++){
     scores[i] = N_inv;
@@ -204,20 +208,20 @@ void PageRank_iterations_1(int N, double **hyperlink_matrix, double d, double ep
                 term +=  scores[j] * hyperlink_matrix[i][j];
             }
 
-            scores[i] = d * term + temp_term;
-            score_delta = fabs(temp_xi - scores[i]);
+            new_scores[i] = d * term + temp_term;
+            score_delta = fabs(temp_xi - new_scores[i]);
             //printf("\nx_i: %f", scores[i]);
             //printf("\nprevious x_i: %f", temp_xi);
             if (score_delta > max_score_delta){
                 max_score_delta = score_delta;
             }
-            printf("\ndelta score: %f", score_delta);
-            printf("\nepsilon %f", epsilon);
         }
+        printf("\nmax delta score: %f", max_score_delta);
     }
 
-    printf("\n\nPageRank algorithm finished!\nscore delta is %f, deemed less than eta threshold: %f", score_delta, epsilon);
+    printf("\n\nPageRank algorithm for matrix is finished!\nscore delta is %f, deemed less than eta threshold: %f\n\nResulting scores:", score_delta, epsilon);
     for (int i = 0; i < N; i++){
+        scores[i] = new_scores[i];
         printf("\nWebpage: %d with score: %f", i, scores[i]);
     }
 }
@@ -235,7 +239,53 @@ void PageRank_iterations_2(int N, int *row_ptr, int *col_idx, double *val, doubl
     hyperlink matrix is now provided in the CRS format.
     
     */
+   printf("\n\nStarting PageRank algorithm for CRS format...");
+   double N_inv = 1. / N;  
+   double one_minus_d = (1. - d);
+   double temp_xi, temp_term;
+   double score_delta = 2.;
+   double max_score_delta = 1.;
+   double *new_scores = calloc(N, sizeof(double));
+
+   for (int i = 0;  i < N; i++){
+       scores[i] = N_inv;
+   }
+
+   while (max_score_delta > epsilon){
+       max_score_delta = 0;
+
+       for (int i = 0; i < N; i++){
+           temp_xi = scores[i];
+           temp_term = one_minus_d * N_inv;
+
+           for (int j = row_ptr[i]; j < row_ptr[i + 1]; j++){
+               new_scores[i] += scores[col_idx[j]] * val[j];
+               //printf("\nscores[col_idx[j]]: %f \tval[j]: %f \tterm: %f", scores[col_idx[j]], val[j], new_scores[i]);
+           }
+           //printf("\ncalculation: d * term + temp_term: %f", d * new_scores[i] + temp_term);
+           //printf("\ncalculation: 0.85 * 0.125 + (1/N) * (1 - 0.85) : %f", 0.85 * 0.125 + (0.15/N));
+           new_scores[i] = d * new_scores[i] + temp_term;
+           //printf("\n\nnew x_i: %f", new_scores[i]);
+           //printf("\tprevious x_i: %f", temp_xi);
+           score_delta = fabs(temp_xi - new_scores[i]);
+
+           if (score_delta > max_score_delta){
+               max_score_delta = score_delta;
+           }
+       }
+
+       printf("\nmax delta score: %f", max_score_delta);
+
+   }
+
+   printf("\n\nPageRank algorithm with CRS finished!\nscore delta is %f, deemed less than eta threshold: %f\n\nResulting scores:", score_delta, epsilon);
+   for (int i = 0; i < N; i++){
+        scores[i] = new_scores[i];
+        printf("\nWebpage: %d with score: %f", i, scores[i]);
+   }
+
 }
+
 
 int comp (void *scores, const void * elem1, const void * elem2){
     // found here: https://stackoverflow.com/questions/1787996/c-library-function-to-perform-sort
@@ -243,7 +293,7 @@ int comp (void *scores, const void * elem1, const void * elem2){
     int index1 = *(int *)elem1;
     int index2 = *(int *)elem2;
 
-    if (score_array[index1] < score_array[index2]) return 1;  // Descending order
+    if (score_array[index1] < score_array[index2]) return 1;  
     if (score_array[index1] > score_array[index2]) return -1;
     return 0;
 }
@@ -254,7 +304,7 @@ void top_n_webpages(int N, double *scores, int n) {
         indices[i] = i;
     }
 
-    // Using qsort_r to pass scores as context
+    // qsort_r will only work with gnu compiler! 
     qsort_r(indices, N, sizeof(int), scores, comp);
 
     printf("\n\nTop %d webpages based on PageRank scores:\n", n);
