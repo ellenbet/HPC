@@ -34,7 +34,7 @@ int main(int argc, char *argv[]){
     double** hyperlink_mat;
     
     int N = 0;
-    printf("\nPageRank algorithm starting..\nconfirming parameters:\n\nsmall filname: %s\nlarge  filename: %s\ndampening constand d: %f\neta threshold: %f\nn webpages: %d\n", s_file, l_file, d, eta, n);
+    printf("\nPageRank algorithm starting for small file..\nconfirming parameters:\n\nsmall filname: %s\nlarge  filename: %s\ndampening constand d: %f\neta threshold: %f\nn webpages: %d\n", s_file, l_file, d, eta, n);
     // read graph from file here for small file 
     read_graph_from_file_1(s_file, &N, &hyperlink_mat);
 
@@ -66,5 +66,37 @@ int main(int argc, char *argv[]){
     printf("\nTotal time spent on crs matrix algorithm: %f", time_spent2);
 
     // repeat above here for large file
+    printf("\nPageRank algorithm starting for medium file...");
+    double** hyperlink_mat2;
+    // read graph from file here for small file 
+    read_graph_from_file_1(l_file, &N, &hyperlink_mat2);
+
+    int *col_idx2, *row_ptr2;
+    double *val2;
+
+    clock_t begin3 = clock();
+    // pagerank iterations 1 here for small file
+    double *scores2 = calloc(N, sizeof(double));
+    PageRank_iterations_1(N, hyperlink_mat2, d, eta, scores2);
+
+    // top n webpages here for small file with matrix system
+    top_n_webpages(N, scores2, n);
+
+    clock_t end3 = clock();
+    double time_spent3 = (double)(end3 - begin3) / CLOCKS_PER_SEC;
+    printf("\nTotal time spent on hyperlink matrix algorithm: %f", time_spent3);
+
+    clock_t begin4 = clock();
+    // crs
+    read_graph_from_file_2(l_file, &N, &row_ptr2, &col_idx2, &val2);
+    // pagerank with crs for small file
+    PageRank_iterations_2(N, row_ptr2, col_idx2, val2, d, eta, scores2);
+    // top n webpages here for small file with crs system
+    top_n_webpages(N, scores2, n);
+
+    clock_t end4 = clock();
+    double time_spent4 = (double)(end4 - begin4) / CLOCKS_PER_SEC;
+    printf("\nTotal time spent on crs matrix algorithm: %f", time_spent4);
+
 
 }

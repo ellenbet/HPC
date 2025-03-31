@@ -114,15 +114,16 @@ void read_graph_from_file_2(char *filename, int *N, int **row_ptr, int **col_idx
         if (line[0] == '#') {
             if (line[2] == 'N') {
                 *N = atoi(&line[9]);
-                total_edges = atoi(&line[19]);
-                printf("\ntotal nodes: %d\ntotal edges: %d", *N, total_edges);
+                total_edges = 0;
+                printf("\ntotal nodes: %d\n", *N);
                 edges_out = (int*) calloc(*N, sizeof(int)); 
                 edges_in = (int*) calloc(*N, sizeof(int)); 
             }
         } else if (line[0] != '#') {
             sscanf(line, "%d %d", &from, &to);
-            edges_out[from] += 1;  // i changed this
+            edges_out[from] += 1; 
             edges_in[to] += 1;
+            total_edges += 1;
         }
     }
 
@@ -156,6 +157,7 @@ void read_graph_from_file_2(char *filename, int *N, int **row_ptr, int **col_idx
     free(edges_out);
     free(edges_in);
 
+    /*
     printf("\n\nResulting CRS format:\n");
     for (int i = 0; i < *N + 1; i++) {
         printf("row_ptr[%d] = %d\n", i, (*row_ptr)[i]);
@@ -166,6 +168,7 @@ void read_graph_from_file_2(char *filename, int *N, int **row_ptr, int **col_idx
         printf("\n%d\t%f", (*col_idx)[i], (*val)[i]);
     }
     printf("\n");
+    */
 
     fclose(file); 
 }
@@ -257,8 +260,6 @@ void PageRank_iterations_2(int N, int *row_ptr, int *col_idx, double *val, doubl
            #pragma omp parallel for
            for (int j = row_ptr[i]; j < row_ptr[i + 1]; j++){
                new_scores[i] += scores[col_idx[j]] * val[j];
-               int id = omp_get_thread_num();
-               printf("\nthread_id: %d", id);
            }
            new_scores[i] = d * new_scores[i] + temp_term;
            score_delta = fabs(temp_xi - new_scores[i]);
