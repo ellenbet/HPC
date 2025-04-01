@@ -98,6 +98,4 @@ int main(int argc, char *argv[]){
     clock_t end4 = clock();
     double time_spent4 = (double)(end4 - begin4) / CLOCKS_PER_SEC;
     printf("\nTotal time spent on crs matrix algorithm: %f", time_spent4);
-
-
 }
