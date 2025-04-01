@@ -268,8 +268,8 @@ pyrightconfig.json
 # ignore elements in bin and all csv files
 bin/
 *.csv
-data/
-bin/*
+PageRank/data/*
+PageRank/bin/*
 
 
 # End of https://www.toptal.com/developers/gitignore/api/macos,python,c++,visualstudiocode
