@@ -32,11 +32,12 @@ int main(int argc, char *argv[]){
     float eta = atof(argv[4]);
     int n = atoi(argv[5]);
     double** hyperlink_mat;
-    
+    bool verbose = false;
     int N = 0;
+
     printf("\nPageRank algorithm starting for small file..\nconfirming parameters:\n\nsmall filname: %s\nlarge  filename: %s\ndampening constand d: %f\neta threshold: %f\nn webpages: %d\n", s_file, l_file, d, eta, n);
     // read graph from file here for small file 
-    read_graph_from_file_1(s_file, &N, &hyperlink_mat);
+    read_graph_from_file_1(s_file, &N, &hyperlink_mat, verbose);
 
     int *col_idx, *row_ptr;
     double *val;
@@ -44,7 +45,7 @@ int main(int argc, char *argv[]){
     clock_t begin = clock();
     // pagerank iterations 1 here for small file
     double *scores = calloc(N, sizeof(double));
-    PageRank_iterations_1(N, hyperlink_mat, d, eta, scores);
+    PageRank_iterations_1(N, hyperlink_mat, d, eta, scores, verbose);
 
     // top n webpages here for small file with matrix system
     top_n_webpages(N, scores, n);
@@ -55,9 +56,9 @@ int main(int argc, char *argv[]){
 
     clock_t begin2 = clock();
     // crs
-    read_graph_from_file_2(s_file, &N, &row_ptr, &col_idx, &val);
+    read_graph_from_file_2(s_file, &N, &row_ptr, &col_idx, &val, verbose);
     // pagerank with crs for small file
-    PageRank_iterations_2(N, row_ptr, col_idx, val, d, eta, scores);
+    PageRank_iterations_2(N, row_ptr, col_idx, val, d, eta, scores, verbose);
     // top n webpages here for small file with crs system
     top_n_webpages(N, scores, n);
 
@@ -69,7 +70,7 @@ int main(int argc, char *argv[]){
     printf("\nPageRank algorithm starting for medium file...");
     double** hyperlink_mat2;
     // read graph from file here for small file 
-    read_graph_from_file_1(l_file, &N, &hyperlink_mat2);
+    read_graph_from_file_1(l_file, &N, &hyperlink_mat2, verbose);
 
     int *col_idx2, *row_ptr2;
     double *val2;
@@ -77,7 +78,7 @@ int main(int argc, char *argv[]){
     clock_t begin3 = clock();
     // pagerank iterations 1 here for small file
     double *scores2 = calloc(N, sizeof(double));
-    PageRank_iterations_1(N, hyperlink_mat2, d, eta, scores2);
+    PageRank_iterations_1(N, hyperlink_mat2, d, eta, scores2, verbose);
 
     // top n webpages here for small file with matrix system
     top_n_webpages(N, scores2, n);
@@ -88,9 +89,9 @@ int main(int argc, char *argv[]){
 
     clock_t begin4 = clock();
     // crs
-    read_graph_from_file_2(l_file, &N, &row_ptr2, &col_idx2, &val2);
+    read_graph_from_file_2(l_file, &N, &row_ptr2, &col_idx2, &val2, verbose);
     // pagerank with crs for small file
-    PageRank_iterations_2(N, row_ptr2, col_idx2, val2, d, eta, scores2);
+    PageRank_iterations_2(N, row_ptr2, col_idx2, val2, d, eta, scores2, verbose);
     // top n webpages here for small file with crs system
     top_n_webpages(N, scores2, n);
 

@@ -18,7 +18,7 @@ double** create_2d_matrix(int m, int n){
     return matrix;
 }
 
-void read_graph_from_file_1(char *filename, int *N, double ***hyperlink_matrix){
+void read_graph_from_file_1(char *filename, int *N, double ***hyperlink_matrix, bool verbose){
     /*
     This function should read a text file that contains a web graph, so that the number of webpages
     is read (into *N), and the corresponding hyperlink matrix is built up as a N × N 2D array
@@ -51,8 +51,11 @@ void read_graph_from_file_1(char *filename, int *N, double ***hyperlink_matrix){
 
         else if (line[0] != '#') {
             sscanf(line, "%d %d", &from, &to);
-            edges_out[from] += 1;
-            printf("\nFrom node: %d to node: %d - node %d has a total of %d edges so far", from, to, from, edges_out[from]);
+            if (to != from && to < *N && from < *N && to > -1 && from > -1){
+                edges_out[from] += 1;
+            } else {
+                printf("\n\nExcluded edge from %d to %d\n", from, to);
+            }
         }
     }
 
@@ -71,20 +74,22 @@ void read_graph_from_file_1(char *filename, int *N, double ***hyperlink_matrix){
         }
     }
 
-    printf("\n\nResulting hyperlink matrix:\n");
-    for (int i = 0; i < *N; i++){
-        printf("\n %d:   " , i);
-        for (int j = 0; j < *N; j++){
-            printf("  %f  " , (*hyperlink_matrix)[i][j]);
+    if (verbose){
+        printf("\n\nResulting hyperlink matrix:\n");
+        for (int i = 0; i < *N; i++){
+            printf("\n %d:   " , i);
+            for (int j = 0; j < *N; j++){
+                printf("  %f  " , (*hyperlink_matrix)[i][j]);
+            }
         }
-    }
+    }  
 
     free(edges_out);
     fclose(file);
 
 }
 
-void read_graph_from_file_2(char *filename, int *N, int **row_ptr, int **col_idx, double **val){
+void read_graph_from_file_2(char *filename, int *N, int **row_ptr, int **col_idx, double **val, bool verbose){
     /*
     This function should read a text file that contains a web graph, so that the
     corresponding hyperlink matrix is built up in the CRS format (see Section 3.6.1 of the textbook). 
@@ -121,16 +126,20 @@ void read_graph_from_file_2(char *filename, int *N, int **row_ptr, int **col_idx
             }
         } else if (line[0] != '#') {
             sscanf(line, "%d %d", &from, &to);
-            edges_out[from] += 1; 
-            edges_in[to] += 1;
-            total_edges += 1;
-        }
+            if (to != from && to < *N && from < *N && to > -1 && from > -1){
+                edges_out[from] += 1; 
+                edges_in[to] += 1;
+                total_edges += 1;
+            } else {
+                printf("\n\nExcluded edge from %d to %d\n", from, to);
+            }
+        } 
     }
 
     *row_ptr = (int*) malloc((*N + 1) * sizeof(int)); 
     *col_idx = (int*) malloc(total_edges * sizeof(int)); 
     *val = (double*) malloc(total_edges * sizeof(double));
-
+ 
     (*row_ptr)[0] = 0;
     rewind(file);
 
@@ -157,24 +166,24 @@ void read_graph_from_file_2(char *filename, int *N, int **row_ptr, int **col_idx
     free(edges_out);
     free(edges_in);
 
-    /*
-    printf("\n\nResulting CRS format:\n");
-    for (int i = 0; i < *N + 1; i++) {
-        printf("row_ptr[%d] = %d\n", i, (*row_ptr)[i]);
-    }
+    if(verbose){
+        printf("\n\nResulting CRS format:\n");
+        for (int i = 0; i < *N + 1; i++) {
+            printf("row_ptr[%d] = %d\n", i, (*row_ptr)[i]);
+        }
 
-    printf("\n\ncol_idx\tval");
-    for (int i = 0; i < total_edges; i++) {
-        printf("\n%d\t%f", (*col_idx)[i], (*val)[i]);
+        printf("\n\ncol_idx\tval");
+        for (int i = 0; i < total_edges; i++) {
+            printf("\n%d\t%f", (*col_idx)[i], (*val)[i]);
+        }
+        printf("\n");
     }
-    printf("\n");
-    */
 
     fclose(file); 
 }
 
 
-void PageRank_iterations_1(int N, double **hyperlink_matrix, double d, double epsilon, double *scores){
+void PageRank_iterations_1(int N, double **hyperlink_matrix, double d, double epsilon, double *scores, bool verbose){
     /*
     This function should implement the iterative procedure of the PageRank algorithm. 
     The input arguments include the N × N hyperlink matrix, the damping constant
@@ -219,15 +228,21 @@ void PageRank_iterations_1(int N, double **hyperlink_matrix, double d, double ep
         printf("\nmax delta score: %f", max_score_delta);
     }
 
-    printf("\n\nPageRank algorithm for matrix is finished!\nscore delta is %f, deemed less than eta threshold: %f\n\nResulting scores:", score_delta, epsilon);
-    for (int i = 0; i < N; i++){
-        scores[i] = new_scores[i];
-        printf("\nWebpage: %d with score: %f", i, scores[i]);
+    if (verbose){
+        printf("\n\nPageRank algorithm for matrix is finished!\nscore delta is %f, deemed less than eta threshold: %f\n\nResulting scores:", score_delta, epsilon);
+        for (int i = 0; i < N; i++){
+            scores[i] = new_scores[i];
+            printf("\nWebpage: %d with score: %f", i, scores[i]);
+        }
+    } else {
+        for (int i = 0; i < N; i++){
+            scores[i] = new_scores[i];
+        } 
     }
 }
 
 
-void PageRank_iterations_2(int N, int *row_ptr, int *col_idx, double *val, double d, double epsilon, double *scores){
+void PageRank_iterations_2(int N, int *row_ptr, int *col_idx, double *val, double d, double epsilon, double *scores, bool verbose){
     /*
     This function should implement the iterative procedure of the PageRank algorithm. 
     The difference from PageRank iterations1 is that the
@@ -274,12 +289,17 @@ void PageRank_iterations_2(int N, int *row_ptr, int *col_idx, double *val, doubl
 
    }
 
-   printf("\n\nPageRank algorithm with CRS finished!\nscore delta is %f, deemed less than eta threshold: %f\n\nResulting scores:", score_delta, epsilon);
-   for (int i = 0; i < N; i++){
-        scores[i] = new_scores[i];
-        printf("\nWebpage: %d with score: %f", i, scores[i]);
-   }
-
+   if (verbose){
+        printf("\n\nPageRank algorithm with CRS finished!\nscore delta is %f, deemed less than eta threshold: %f\n\nResulting scores:", score_delta, epsilon);
+        for (int i = 0; i < N; i++){
+                scores[i] = new_scores[i];
+                printf("\nWebpage: %d with score: %f", i, scores[i]);
+        }
+    } else {
+        for (int i = 0; i < N; i++){
+            scores[i] = new_scores[i];
+        }
+    }
 }
 
 
