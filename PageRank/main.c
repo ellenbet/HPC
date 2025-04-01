@@ -8,6 +8,7 @@ to read the large web graph file, followed by PageRank iterations2 and top n web
 Proper comments and output info (using printf) should be provided
 
 */
+
 #include<stdio.h>
 #include "include/utils.h"
 #include <stdlib.h>
@@ -16,12 +17,12 @@ Proper comments and output info (using printf) should be provided
 
 
 int main(int argc, char *argv[]){
-    printf("\n\nNUMBER OF ARGUMENTS PROVIDED:\n argc: %d\n", argc);
+    printf("\n\nNUMBER OF ARGUMENTS PROVIDED: %d", argc);
     for (int i = 0; i < argc; i++) {
-        printf("Argument %d: %s\n", i, argv[i]);
+        printf("\nArgument %d: %s", i, argv[i]);
     }
     if(argc != 6){
-        perror("Number of arguments provided does not match number of arguments needed: s_file, large_filename, d, eta, n");
+        perror("\nNumber of arguments provided does not match number of arguments needed: s_file, large_filename, d, eta, n");
         return 1;
     }
 
@@ -34,13 +35,12 @@ int main(int argc, char *argv[]){
     double** hyperlink_mat;
     bool verbose = false;
     int N = 0;
+    int *col_idx, *row_ptr;
+    double *val;
 
     printf("\nPageRank algorithm starting for small file..\nconfirming parameters:\n\nsmall filname: %s\nlarge  filename: %s\ndampening constand d: %f\neta threshold: %f\nn webpages: %d\n", s_file, l_file, d, eta, n);
     // read graph from file here for small file 
     read_graph_from_file_1(s_file, &N, &hyperlink_mat, verbose);
-
-    int *col_idx, *row_ptr;
-    double *val;
 
     clock_t begin = clock();
     // pagerank iterations 1 here for small file

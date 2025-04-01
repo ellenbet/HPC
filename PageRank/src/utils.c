@@ -120,7 +120,7 @@ void read_graph_from_file_2(char *filename, int *N, int **row_ptr, int **col_idx
             if (line[2] == 'N') {
                 *N = atoi(&line[9]);
                 total_edges = 0;
-                printf("\ntotal nodes: %d\n", *N);
+                printf("\ntotal nodes: %d", *N);
                 edges_out = (int*) calloc(*N, sizeof(int)); 
                 edges_in = (int*) calloc(*N, sizeof(int)); 
             }
@@ -135,6 +135,7 @@ void read_graph_from_file_2(char *filename, int *N, int **row_ptr, int **col_idx
             }
         } 
     }
+    printf("\ntotal edges: %d", total_edges);
 
     *row_ptr = (int*) malloc((*N + 1) * sizeof(int)); 
     *col_idx = (int*) malloc(total_edges * sizeof(int)); 
@@ -159,7 +160,11 @@ void read_graph_from_file_2(char *filename, int *N, int **row_ptr, int **col_idx
     while (fscanf(file, "%d %d", &from, &to) == 2) {
         int index = current_pos[to];
         (*col_idx)[index] = from;
-        (*val)[index] = 1.0 / edges_out[from]; 
+        if (edges_out[from] != 0){
+            (*val)[index] = 1.0 / edges_out[from];
+        } else {
+            printf("\n\nDangling webpage with id: %d", from);
+        }
         current_pos[to]++; 
     }
 
@@ -249,7 +254,7 @@ void PageRank_iterations_2(int N, int *row_ptr, int *col_idx, double *val, doubl
     hyperlink matrix is now provided in the CRS format.
     
     */
-   printf("\n\nStarting PageRank algorithm for CRS format...");
+   printf("\n\nStarting parallelized PageRank algorithm for CRS format...");
    double N_inv = 1. / N;  
    double one_minus_d = (1. - d);
    double temp_xi, temp_term;
