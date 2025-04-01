@@ -13,7 +13,7 @@ The PageRank-project contains the following structure:
 │   └── utils.c                             # utility functions                     
 ├── include/                                # Header files 
 │   └── utils.h                             # Header file corresponding to utils.cpp            
-└── data/                                   # In .gitignore
+└── data/  
     ├── small_example.txt
     ├── medium_example.txt
     └── large_example.txt
