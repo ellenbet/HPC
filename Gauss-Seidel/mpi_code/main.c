@@ -30,10 +30,12 @@ int main (int nargs, char **args){
     printf("\n\nRunning Gauss-Streidel algorithms:");
     for (n = 0; n < num_iters; n++) {
         GS_iteration_normal(kmax, jmax, imax, arr1);
+        GS_iteration_normal(kmax, jmax, imax, arr2);
         //GS_iteration_2_chunks(kmax, jmax, imax, arr2);
     }
 
     // checking results
     printf("\n\nConfirming new cube:");
     print_cube(kmax, jmax, imax, arr1);
+    printf("\n\ndistance: %f", euclidean_distance(kmax, jmax, imax, arr1, arr2));
 }

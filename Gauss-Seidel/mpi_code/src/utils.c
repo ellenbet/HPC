@@ -116,13 +116,9 @@ void allocate_array3D (int kmax, int jmax, int imax, double ****array){
     }
 
     for (i = 0; i < imax; i++) {
-        //printf("\n");
         for (j = 0; j < jmax; j++) {
-            //printf("\n");
             for (k = 0; k < kmax; k++) {
-                //printf("\n");
-                outer[i][j][k] = (double)rand()/100000;  // Assign a random value
-                //printf("%f\t ", outer[i][j][k]);
+                outer[i][j][k] = (i+1)*(j+1)*(k+1); 
             }
         }
     }
@@ -149,5 +145,27 @@ void print_cube(double kmax, double jmax, double imax, double ***arr){
 }
 
 double euclidean_distance (int kmax, int jmax, int imax, double ***arr1, double ***arr2){
+    double total_diff = 0.;
 
+    #pragma omp parallel
+    {
+        double diff = 0.; 
+
+        #pragma omp for
+        for (int i = 0; i < imax; i++) {
+            for (int j = 0; j < jmax; j++) {
+                for (int k = 0; k < kmax; k++) {
+                    diff += (arr1[i][j][k] - arr2[i][j][k]) * (arr1[i][j][k] - arr2[i][j][k]);
+
+                }
+            }
+        }
+    
+        #pragma omp critical
+        {
+            total_diff += diff;
+        }
+    }
+
+    return total_diff;
 }
