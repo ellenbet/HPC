@@ -30,12 +30,29 @@ OpenMP).
 
 /*
 
-You are requested to parallelize the Guass-Seidel algorithm using two chunks, so that two MPI
+You are requested to parallelize the Gauss-Seidel algorithm using two chunks, so that two MPI
 processes can divide the work on each wavefront.
 
 */
 
-#include"include/utils.h"
+#include"../include/utils.h"
+#include <stdio.h>
+#include<stdlib.h>
+#include <mpi.h>
+
+void GS_iteration_normal (int kmax, int jmax, int imax, double ***phi){
+    int k,j,i;
+    for (k=1; k<kmax-1; k++){
+        for (j=1; j<jmax-1; j++){
+            for (i=1; i<imax-1; i++){
+                phi[i][j][k] = (phi[i-1][j][k] + phi[i][j-1][k]
+                +phi[i][j][k-1] + phi[i][j][k+1]
+                +phi[i][j+1][k] + phi[i+1][j][k])/6.0;
+            }
+        }
+    }
+}
+
 
 void GS_iteration_2_chunks (int kmax, int jmax, int imax, double ***phi){
     // first wavefront: only computation on left chunk at level k=1
@@ -77,6 +94,58 @@ void GS_iteration_2_chunks_mpi (int my_rank, int kmax, int my_jmax, int imax, do
 
 void allocate_array3D (int kmax, int jmax, int imax, double ****array){
 
+    double ***outer      =       (double***)    malloc(imax * sizeof(double**));          //  rows
+    double **inner       =       (double**)     malloc(imax * jmax * sizeof(double*));       //  columns
+    double *inner_inner  =       (double*)      malloc(imax * jmax * kmax * sizeof(double));    //  depth
+    
+    int i, j, k, col_pointer;
+
+    printf("\n\nMemory assigned..");
+    // Check memory allocation
+    if (!outer || !inner || !inner_inner) {
+        printf("\nMemory allocation failed!");
+    }
+
+    for (int i = 0; i < imax; i++){
+        col_pointer = jmax * i;
+        outer[i] = &inner[col_pointer];
+    }
+
+    for (i = 0; i < jmax * imax; i++){
+        inner[i] = &inner_inner[i * kmax];
+    }
+
+    for (i = 0; i < imax; i++) {
+        //printf("\n");
+        for (j = 0; j < jmax; j++) {
+            //printf("\n");
+            for (k = 0; k < kmax; k++) {
+                //printf("\n");
+                outer[i][j][k] = (double)rand()/100000;  // Assign a random value
+                //printf("%f\t ", outer[i][j][k]);
+            }
+        }
+    }
+
+    printf("\nValues assigned..");
+    print_cube(kmax, jmax, imax, outer);
+
+    // saving pointer as outer cube layer
+    *array = outer;
+}
+
+void print_cube(double kmax, double jmax, double imax, double ***arr){
+    printf("\nPrinting cube below, slice by slice:");
+    for (int k = 0; k < kmax; k++) {
+        printf("\n-----------------------------------------------\nslice %d\n-----------------------------------------------", k);
+        for (int i = 0; i < imax; i++) {
+            printf("\n|");
+            for (int j = 0; j < jmax; j++) {
+                printf("\t%0.1f\t", arr[i][j][k]);
+            }
+            printf("\t|");
+        }
+    }
 }
 
 double euclidean_distance (int kmax, int jmax, int imax, double ***arr1, double ***arr2){

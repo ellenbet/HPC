@@ -2,10 +2,13 @@
 # Modified for C (instead of C++) 
 
 export C_INCLUDE_PATH = /opt/homebrew/include:/Library/Developer/CommandLineTools/usr/include
+export OMPI_CC = gcc-14
+export TMPDIR = /tmp
 
 # Compiler settings
-CC = gcc-14 # Use GCC for C compilation
-CFLAGS = -std=c11 -Wall -I/opt/homebrew/include -I/Library/Developer/CommandLineTools/usr/include -fopenmp
+#CC = gcc-14 # Use GCC for C compilation
+CC = mpicc
+CFLAGS = -std=c11 -Wall -I/opt/homebrew/include -I/Library/Developer/CommandLineTools/usr/include -fopenmp #-lmpi 
 #CFLAGS += -I/opt/homebrew/Cellar/gcc@12/12.4.0/lib/gcc/12/gcc/aarch64-apple-darwin21/12/include
 #CFLAGS += -I/opt/homebrew/Cellar/gcc@12/12.4.0/lib/gcc/12/gcc/aarch64-apple-darwin21/12/include-fixed
 # -fopenmp -I/opt/homebrew/opt/libomp/include  # Uncomment if needed
