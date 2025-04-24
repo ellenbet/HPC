@@ -42,9 +42,9 @@ processes can divide the work on each wavefront.
 
 void GS_iteration_normal (int kmax, int jmax, int imax, double ***phi){
     int k,j,i;
-    for (k=1; k<kmax-1; k++){
+    for (i=1; i<imax-1; i++){
         for (j=1; j<jmax-1; j++){
-            for (i=1; i<imax-1; i++){
+            for (k=1; k<kmax-1; k++){
                 phi[i][j][k] = (phi[i-1][j][k] + phi[i][j-1][k]
                 +phi[i][j][k-1] + phi[i][j][k+1]
                 +phi[i][j+1][k] + phi[i+1][j][k])/6.0;
@@ -55,16 +55,33 @@ void GS_iteration_normal (int kmax, int jmax, int imax, double ***phi){
 
 
 void GS_iteration_2_chunks (int kmax, int jmax, int imax, double ***phi){
-    // first wavefront: only computation on left chunk at level k=1
-    // ...
-    for (int k = 2; k <= kmax - 2; k++) {
-    // computation on left chunk at level k
-    // ...
-    // computation on right chunk at level k-1
-    // ...
+    int jmid;
+
+    if (jmax%2 == 0){
+        jmid = jmax/2 - 1;
+
+    } else {
+        jmid = (jmax - 1)/2;
     }
-    // last wavefront: only computation on right chunk at level k=kmax-2
-    // ...
+
+    for (int i = 2; i <= imax - 2; i++){
+        for (int j = 1; j < jmid; j++){
+            for (int k = 1; k < kmax - 1; k++){
+                phi[i][j][k] = (phi[i-1][j][k] + phi[i][j-1][k]
+                +phi[i][j][k-1] + phi[i][j][k+1]
+                +phi[i][j+1][k] + phi[i+1][j][k])/6.0;
+            }
+        }
+
+        for (int j = jmid; j < jmax - 1; j++){
+            for (int k = 1; k < kmax - 1; k++){
+                phi[i][j][k] = (phi[i-1][j][k] + phi[i][j-1][k]
+                +phi[i][j][k-1] + phi[i][j][k+1]
+                +phi[i][j+1][k] + phi[i+1][j][k])/6.0;
+            }
+        }
+
+    }
 }
 
 void GS_iteration_2_chunks_mpi (int my_rank, int kmax, int my_jmax, int imax, double ***my_phi){
@@ -92,7 +109,7 @@ void GS_iteration_2_chunks_mpi (int my_rank, int kmax, int my_jmax, int imax, do
 
 }
 
-void allocate_array3D (int kmax, int jmax, int imax, double ****array){
+void allocate_array3D (int kmax, int jmax, int imax, double ****array, int verbose){
 
     double ***outer      =       (double***)    malloc(imax * sizeof(double**));          //  rows
     double **inner       =       (double**)     malloc(imax * jmax * sizeof(double*));       //  columns
@@ -100,7 +117,7 @@ void allocate_array3D (int kmax, int jmax, int imax, double ****array){
     
     int i, j, k, col_pointer;
 
-    printf("\n\nMemory assigned..");
+    printf("\nMemory assigned..");
     // Check memory allocation
     if (!outer || !inner || !inner_inner) {
         printf("\nMemory allocation failed!");
@@ -123,8 +140,8 @@ void allocate_array3D (int kmax, int jmax, int imax, double ****array){
         }
     }
 
-    printf("\nValues assigned..");
-    print_cube(kmax, jmax, imax, outer);
+    printf("\nValues assigned..\n");
+    if (verbose) {print_cube(kmax, jmax, imax, outer);}
 
     // saving pointer as outer cube layer
     *array = outer;
