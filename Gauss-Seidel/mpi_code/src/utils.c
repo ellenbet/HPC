@@ -41,29 +41,35 @@ void GS_iteration_2_chunks (int kmax, int jmax, int imax, double ***phi){
 }
 
 void GS_iteration_2_chunks_mpi(int my_rank, int kmax, int my_jmax, int imax, double ***my_phi){
-    for (int i = 2; i <= imax - 2; i++){
-        if (my_rank == 0){
-            for (int j = 1; j < my_jmax - 1; j++){
+    for (int i = 2; i < imax - 1; i++){
+        if (my_rank == 1){
+            // rank 1 performs left side operations
+            for (int j = 1; j < my_jmax; j++){
                 for (int k = 1; k < kmax - 1; k++){
                     my_phi[i][j][k] = (my_phi[i-1][j][k] + my_phi[i][j-1][k]
                     +my_phi[i][j][k-1] + my_phi[i][j][k+1]
                     +my_phi[i][j+1][k] + my_phi[i+1][j][k])/6.0;
                 }
             }
-        }
-    }
-    /*
-            MPI_Send(my_phi[i][my_jmax - 2], kmax, MPI_DOUBLE, 1, 0, MPI_COMM_WORLD);
+            // sends results continiously for iterations of i, my_jmax - 2 bc my_jmax is jmax/2 + 1
+            MPI_Send((&my_phi[i][my_jmax - 2][0]), kmax, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
         }
         else {
+            // rank 0 performs right side operations
             double left;
             double *buffer = malloc(kmax * sizeof(double));
-            MPI_Recv(buffer, kmax, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+            // recieves results per i
+            MPI_Recv(buffer, kmax, MPI_DOUBLE, 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
             for (int j = 0; j < my_jmax - 1; j++){
                 for (int k = 1; k < kmax - 1; k++){
                     if (j == 0){
+                        // at wavefront, exchanging results from rank 1
                         left = buffer[k];
                     } else {
+
+                        // otherwise continioue as previously
                         left = my_phi[i][j-1][k];
                     }
                     my_phi[i][j][k] = (my_phi[i-1][j][k] + left
@@ -73,7 +79,6 @@ void GS_iteration_2_chunks_mpi(int my_rank, int kmax, int my_jmax, int imax, dou
             }
         }
     }
-    */
 }
 
 void allocate_array3D (int kmax, int jmax, int imax, double ****array, int verbose){
@@ -160,16 +165,16 @@ double euclidean_distance (int kmax, int jmax, int imax, double ***arr1, double 
     return diff;
 }
 
-void split_cube(int imax, int jmax, int kmax, double ***cube, double ***new_cube, int split_on_index, char split_on_dimension, int return_split){
+void split_cube(int imax, int jmax, int kmax, double ***cube, double ***new_cube, int split_on_index, char split_on_dimension, int rank){
     printf("\nSplitting cube on dimension ");
     int i, j, k;
     if (split_on_dimension == 'i'){
         printf("\nERROR: Not implemented yet");
     } else if (split_on_dimension == 'j') {
-        if (return_split) {
+        if (rank == 0) {
             printf("j, with splitting index %d", split_on_index - 2);
             int j_start =  split_on_index - 2;
-            printf(", retrieving right side of cube ..");
+            printf(", retrieving right side of cube for rank %d ..", rank);
             // returning right hand side
             for (i = 0; i < imax; i++){
                 for (j = j_start; j < jmax; j++){
@@ -178,10 +183,9 @@ void split_cube(int imax, int jmax, int kmax, double ***cube, double ***new_cube
                     }
                 }
             }
-
         } else { 
             printf("j, with splitting index %d", split_on_index);
-            printf(", retrieving left side of cube ..");
+            printf(", retrieving left side of cube for rank %d ..", rank);
             // returning left hand side
             for (i = 0; i < imax; i++){
                 for (j = 0; j < split_on_index; j++){
@@ -196,5 +200,5 @@ void split_cube(int imax, int jmax, int kmax, double ***cube, double ***new_cube
     } else {
         printf("ERROR: Dimension not recognized, has to be i, j or k");
     }
-
+    printf("\nSplit successful! ");
 }

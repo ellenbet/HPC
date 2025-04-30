@@ -60,7 +60,7 @@ $(BINDIR)/%.o: $(SRCDIR)/%.c
 # Run the compiled program with optional arguments
 run: $(TARGET)
 	@echo "Running program with arguments: $(ARGS)"
-	mpirun -np 1 ./$(TARGET) $(ARGS)
+	mpirun -np 2 ./$(TARGET) $(ARGS)
 
 # Cleanup
 clean:
