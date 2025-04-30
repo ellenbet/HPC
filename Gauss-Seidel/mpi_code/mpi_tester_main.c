@@ -19,14 +19,6 @@ int main(int argc, char **argv) {
         num_iters = atoi(argv[4]);
     }
 
-    if (size != 2) {
-        if (rank == 0) {
-            printf("ERROR: This program requires 2 MPI processes.\n");
-        }
-        MPI_Finalize();
-        exit(1); 
-    }
-
     printf("\nBroadcasting parameters..");
     MPI_Bcast(&kmax, 1, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&jmax, 1, MPI_INT, 0, MPI_COMM_WORLD);
@@ -34,14 +26,31 @@ int main(int argc, char **argv) {
     MPI_Bcast(&num_iters, 1, MPI_INT, 0, MPI_COMM_WORLD);
     printf("\nParameters broadcasted i: %i, j: %d, k: %d..", imax, jmax, kmax);
 
-    if (rank == 0){
-        my_jmax = jmax / 2;
-        printf("\nProcess 0, my_jmax: %d", my_jmax);
-    } else {
-    my_jmax = jmax;
-    printf("\nProcess 1, my_jmax: %d", my_jmax);
-    }
 
+    my_jmax = jmax/2 + 1;
+    double ***old, ***new_left, ***new_left2, ***new_right, ***new_right2;;
+    int verbose = 0;
+
+    allocate_array3D(kmax, jmax, imax, &old, verbose);
+    allocate_array3D(kmax, my_jmax, imax, &new_right, verbose);
+    allocate_array3D(kmax, my_jmax, imax, &new_left, verbose);
+
+    allocate_array3D(kmax, my_jmax, imax, &new_right2, verbose);
+
+    int left_split = 0;
+    int right_split = 1;
+    split_cube(imax, jmax, kmax, old, new_right, my_jmax, 'j', right_split);
+    split_cube(imax, jmax, kmax, old, new_right2, my_jmax, 'j', right_split);
+    split_cube(imax, jmax, kmax, old, new_left, my_jmax, 'j', left_split);
+    split_cube(imax, jmax, kmax, old, new_left2, my_jmax, 'j', left_split);
+
+    //print_cube(imax, my_jmax, kmax, new_right);
+    //printf("\nSuccess!");
+
+    GS_iteration_2_chunks_mpi(rank, kmax, my_jmax, imax, new_right);
+    GS_iteration_2_chunks(kmax, my_jmax, imax, new_right2);
+
+    printf("euclidian: %f", euclidean_distance(kmax, my_jmax, imax, new_right, new_right2));
 
     MPI_Finalize();
     return 0;

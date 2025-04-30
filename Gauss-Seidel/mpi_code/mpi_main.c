@@ -6,8 +6,7 @@
 int main(int argc, char **argv) {
     int rank, size;
     int kmax, jmax, imax, num_iters;
-    int my_jmax;
-    double ***my_arr, ***serial_arr, ***full_arr;
+    double ***my_arr, ***serial_arr1, ***serial_arr2, ***full_arr;
 
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -22,11 +21,11 @@ int main(int argc, char **argv) {
         exit(1); 
     }
 
-    if (argc != 5) {
-        printf("ERROR with intial arguments: %s kmax jmax imax num_iters\n", argv[0]);
-    }
-
     if (rank == 0) {
+        if (argc != 5) {
+            printf("ERROR with intial arguments: %s kmax jmax imax num_iters\n", argv[0]);
+        }
+
         kmax = atoi(argv[1]);
         jmax = atoi(argv[2]);
         imax = atoi(argv[3]);
@@ -38,27 +37,25 @@ int main(int argc, char **argv) {
     MPI_Bcast(&jmax, 1, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&imax, 1, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&num_iters, 1, MPI_INT, 0, MPI_COMM_WORLD);
-    printf("\nParameters broadcasted i: %i, j: %d, k: %d..", imax, jmax, kmax);
+    printf("\nParameters broadcasted imax: %d, jmax: %d, kmax: %d", imax, jmax, kmax);
+    int my_jmax = jmax/2 + 1;
+    printf(" and my_jmax: %d", my_jmax);
 
-    if (rank == 0){
-        my_jmax = jmax / 2;
-        printf("\nProcess 0, my_jmax: %d", my_jmax);
-    } else {
-        my_jmax = jmax;
-        printf("\nProcess 1, my_jmax: %d", my_jmax);
-    }
-
-    // local array
+    // local array and full array
     printf("\nAssigning memory to local array..");
-    allocate_array3D(kmax, jmax, imax, &my_arr, 0);
+    allocate_array3D(kmax, my_jmax, imax, &my_arr, 0);
+    allocate_array3D(kmax, jmax, imax, &full_arr, 0);
 
     // full arrays for serial test and final global
     if (rank == 0) {
         printf("\nAssigning memory to serial and full array in rank 0..");
-        allocate_array3D(kmax, jmax, imax, &serial_arr, 0);
-        allocate_array3D(kmax, jmax, imax, &full_arr, 0);
+        allocate_array3D(kmax, jmax, imax, &serial_arr1, 0);
+        allocate_array3D(kmax, jmax, imax, &serial_arr2, 0);
         printf("\t..done!");
     }
+
+    // splitting cube based on rank
+    split_cube(imax, jmax, kmax, full_arr, my_arr, my_jmax, 'j', rank);
   
     printf("\nRunning algorithm for rank %d..", rank);
     for (int iter = 0; iter < num_iters; iter++) {
@@ -67,33 +64,46 @@ int main(int argc, char **argv) {
     
     printf("\t..done!");
     // assemble data
-    for (int i = 0; i < imax; i++) {
-        if (rank == 0) {
-            for (int j = 0; j < my_jmax - 1; j++) {
+    int total_doubles = imax * (my_jmax - 1) * kmax;
+
+    if (rank == 0){
+        for (int i = 0; i < imax; i++) {
+            for (int j = 0; j < my_jmax; j++) {
                 for (int k = 0; k < kmax; k++) {
                     full_arr[i][j][k] = my_arr[i][j][k];
                 }
             }
-            MPI_Recv((&full_arr[i][my_jmax][0]), kmax, MPI_DOUBLE, 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        } else if (rank == 1) {
-            MPI_Send((&my_arr[i][my_jmax/2][0]), kmax, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
         }
-    }
-        
-
-    // serial comparison 
-    if (rank == 0) {
-        for (int iter = 0; iter < num_iters; iter++) {
-            GS_iteration_2_chunks(kmax, jmax, imax, serial_arr);
-        }
-        //print_cube(kmax, jmax, imax, serial_arr);
+        MPI_Recv((&full_arr[0][my_jmax - 1][0]), total_doubles, MPI_DOUBLE, 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         //print_cube(kmax, jmax, imax, full_arr);
 
-        // euclidian distance
-        double diff = euclidean_distance(kmax, jmax, imax, full_arr, serial_arr);
-        printf("\nEuclidean distance between serial and parallel: %e\n", diff);
-    }
 
+        if (euclidean_distance(kmax, jmax, imax, full_arr, serial_arr1) == 0){
+            printf("\n\nERROR: no changes have been made to the full array, exiting program\n");
+            return 1;
+
+        }
+
+        for (int iter = 0; iter < num_iters; iter++) {
+            GS_iteration_2_chunks(kmax, jmax, imax, serial_arr1);
+            GS_iteration_normal(kmax, jmax, imax, serial_arr2);
+        }
+
+
+        // serial comparison 
+        // euclidian distance
+        double diff1 = euclidean_distance(kmax, jmax, imax, full_arr, serial_arr1);
+        double diff2 = euclidean_distance(kmax, jmax, imax, serial_arr2, serial_arr1);
+        printf("\nEuclidean distance between two serial implementations: %e\n", diff2);
+        printf("\nEuclidean distance between serial and parallel: %e\n", diff1);
+
+    } else if (rank == 1){
+        // since my_jmax = jmax/2 for rank 1 and my_jmax = jmax/2 for rank 0
+        // MPI_Send((&my_arr[i][my_jmax/2][0]), kmax, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
+        MPI_Send(&my_arr[0][1][0], total_doubles, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
+    }
+    
+        
     MPI_Finalize();
     return 0;
 }

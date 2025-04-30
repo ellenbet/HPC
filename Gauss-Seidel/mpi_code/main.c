@@ -16,25 +16,28 @@ int main (int nargs, char **args){
     // allocating arrays with random values
     printf("\nSetting up 3D array nr 1: ");
     allocate_array3D(kmax, jmax, imax, &arr1, verbose);
+
     printf("\nSetting up 3D array nr 2: ");
     allocate_array3D(kmax, jmax, imax, &arr2, verbose);
 
+    printf("\narr1 address: %p", (void*)arr1);
+    printf("\narr2 address: %p", (void*)arr2);
 
-    if(parallel_euclidean_distance(kmax, jmax, imax, arr1, arr2) == euclidean_distance(kmax, jmax, imax, arr1, arr2)){
+
+    if(0 == euclidean_distance(kmax, jmax, imax, arr1, arr2)){
+        printf("\nCube distance prior to GS is zero");
         // running the gs algorithm 
-        printf("\nRunning Gauss-Streidel algorithms...");
+        printf("\nRunning Gauss-Seidel algorithms...");
         for (n = 0; n < num_iters; n++) {
-            GS_iteration_normal(kmax, jmax, imax, arr1);
-            //GS_iteration_2_chunks(kmax, jmax, imax, arr2);
+            //GS_iteration_normal(kmax, jmax, imax, arr1);
+            GS_iteration_2_chunks(kmax, jmax, imax, arr2);
         }
 
-        printf("\nParallel euclidian distance between cubes after GS: %0.6f", parallel_euclidean_distance(kmax, jmax, imax, arr1, arr2)); //possible to just use euclidean_distance instead 
-        printf("\nEuclidian distance between cubes after GS: %0.6f", euclidean_distance(kmax, jmax, imax, arr1, arr2)); 
-    return 0;
+        printf("\nParallel function distance between cubes after GS: %0.6f", parallel_euclidean_distance(kmax, jmax, imax, arr1, arr2)); //possible to just use euclidean_distance instead 
+        printf("\nDistance after GS: %f", euclidean_distance(kmax, jmax, imax, arr1, arr2)); 
+        return 0;
     } else {
         printf("ERROR: the two cubes to be compared have different values prior to algorithm changes");
+        return 1;
     }
-
-
-
 }

@@ -2,10 +2,11 @@
 #include <stdio.h>
 #include<stdlib.h>
 #include <mpi.h>
+#include<math.h>
 
 void GS_iteration_normal (int kmax, int jmax, int imax, double ***phi){
     int k,j,i;
-    for (i=1; i<imax-1; i++){
+    for (i = 2; i<imax-1; i++){
         for (j=1; j<jmax-1; j++){
             for (k=1; k<kmax-1; k++){
                 phi[i][j][k] = (phi[i-1][j][k] + phi[i][j-1][k]
@@ -15,7 +16,6 @@ void GS_iteration_normal (int kmax, int jmax, int imax, double ***phi){
         }
     }
 }
-
 
 void GS_iteration_2_chunks (int kmax, int jmax, int imax, double ***phi){
     int jmid;
@@ -43,23 +43,25 @@ void GS_iteration_2_chunks (int kmax, int jmax, int imax, double ***phi){
 void GS_iteration_2_chunks_mpi(int my_rank, int kmax, int my_jmax, int imax, double ***my_phi){
     for (int i = 2; i <= imax - 2; i++){
         if (my_rank == 0){
-            for (int j = 1; j < my_jmax; j++){
+            for (int j = 1; j < my_jmax - 1; j++){
                 for (int k = 1; k < kmax - 1; k++){
                     my_phi[i][j][k] = (my_phi[i-1][j][k] + my_phi[i][j-1][k]
                     +my_phi[i][j][k-1] + my_phi[i][j][k+1]
                     +my_phi[i][j+1][k] + my_phi[i+1][j][k])/6.0;
                 }
             }
-            MPI_Send(my_phi[i][my_jmax - 1], kmax, MPI_DOUBLE, 1, 0, MPI_COMM_WORLD);
+        }
+    }
+    /*
+            MPI_Send(my_phi[i][my_jmax - 2], kmax, MPI_DOUBLE, 1, 0, MPI_COMM_WORLD);
         }
         else {
-            int jmid = my_jmax/2 - 1;
             double left;
             double *buffer = malloc(kmax * sizeof(double));
             MPI_Recv(buffer, kmax, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-            for (int j = jmid; j < my_jmax - 1; j++){
+            for (int j = 0; j < my_jmax - 1; j++){
                 for (int k = 1; k < kmax - 1; k++){
-                    if (j == jmid){
+                    if (j == 0){
                         left = buffer[k];
                     } else {
                         left = my_phi[i][j-1][k];
@@ -71,79 +73,9 @@ void GS_iteration_2_chunks_mpi(int my_rank, int kmax, int my_jmax, int imax, dou
             }
         }
     }
-}
-
-/*
-void GS_iteration_2_chunks_mpi (int my_rank, int kmax, int my_jmax, int imax, double ***my_phi){
-   int i, j, k;
-   if (my_rank == 0){
-    for (i = 2; i <= imax - 2; i++) {
-        for (j = 1; j < my_jmax + 1; j++) { 
-            for (k = 1; k < kmax - 1; k++) {
-                my_phi[i][j][k] = (my_phi[i-1][j][k] + my_phi[i][j-1][k]
-                                + my_phi[i][j][k-1] + my_phi[i][j][k+1]
-                                + my_phi[i][j+1][k] + my_phi[i+1][j][k]) / 6.0;
-            }
-        }
-       MPI_Send((&my_phi[i][my_jmax][0]), kmax, MPI_DOUBLE, 1, 0, MPI_COMM_WORLD);
-    }
-    } else if (my_rank == 1){
-        for (i = 2 ; i <= imax - 2; i++) {
-
-            
-            double *buffer = malloc((kmax) * sizeof(double));
-            MPI_Status status;
-            MPI_Recv(buffer, kmax, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-
-            // fail check
-            int number_amount = 0;
-            MPI_Get_count(&status, MPI_DOUBLE, &number_amount);
-            printf("\nnumber of elements recieved: %d", number_amount);
-            if (number_amount != kmax) {
-                printf("\nError: expected %d doubles, but received %d", kmax, number_amount);
-                MPI_Abort(MPI_COMM_WORLD, 1);
-            } 
-
-            for (j = my_jmax/2 + 1; j < my_jmax - 1; j++) {  
-                for (k = 1; k < kmax - 1; k++) {
-                    double left;
-                    if (j == my_jmax/2 + 1) {
-                        // if j = 1, this is the wavefront and the buffer recieved from process 0 is used
-                        left = buffer[k];
-                    } else {
-                        // otherwise computation goes on as usual
-                        left = my_phi[i][j-1][k];
-                    }
-                    printf("\ni: %d\tj:%d\tk:%d", i, j, k);
-                    my_phi[i][j][k] = (my_phi[i-1][j][k] + left
-                                     + my_phi[i][j][k-1] + my_phi[i][j][k+1]
-                                     + my_phi[i][j+1][k] + my_phi[i+1][j][k]) / 6.0;
-                }
-            }
-            free(buffer);
-            
-        }
-    }
-        
-}
     */
-/*
-void allocate_array3D (int kmax, int jmax, int imax, double ****arr, int verbose){
-    double ***out = malloc(imax * sizeof(double**));
-    for (int i = 0; i < imax; i++) {
-        out[i] = malloc(jmax * sizeof(double*));
-        for (int j = 0; j < jmax; j++) {
-            out[i][j] = malloc(kmax * sizeof(double));
-        }
-    }
-
-    printf("\nValues assigned..\n");
-    if (verbose) {
-        print_cube(kmax, jmax, imax, out);
-    }
-    *arr = out;
 }
-*/
+
 void allocate_array3D (int kmax, int jmax, int imax, double ****array, int verbose){
 
     double ***outer      =       (double***)    malloc(imax * sizeof(double**));          //  rows
@@ -167,7 +99,7 @@ void allocate_array3D (int kmax, int jmax, int imax, double ****array, int verbo
     for (i = 0; i < imax; i++) {
         for (j = 0; j < jmax; j++) {
             for (k = 0; k < kmax; k++) {
-                outer[i][j][k] = (i)*(j)*(k); 
+                outer[i][j][k] = k * (k+1) * (i+1) * (j+1);
             }
         }
     }
@@ -187,7 +119,7 @@ void print_cube(double kmax, double jmax, double imax, double ***arr){
         for (int i = 0; i < imax; i++) {
             printf("\n|");
             for (int j = 0; j < jmax; j++) {
-                printf("\t%0.1f\t", arr[i][j][k]);
+                printf("\t%0.3f\t", arr[i][j][k]);
             }
             printf("\t|");
         }
@@ -221,10 +153,48 @@ double euclidean_distance (int kmax, int jmax, int imax, double ***arr1, double 
     for (int i = 0; i < imax; i++) {
         for (int j = 0; j < jmax; j++) {
             for (int k = 0; k < kmax; k++) {
-                diff += (arr1[i][j][k] - arr2[i][j][k]) * (arr1[i][j][k] - arr2[i][j][k]);
+                diff += sqrt((arr1[i][j][k] - arr2[i][j][k]) * (arr1[i][j][k] - arr2[i][j][k]));
             }
         }
     }
     return diff;
 }
 
+void split_cube(int imax, int jmax, int kmax, double ***cube, double ***new_cube, int split_on_index, char split_on_dimension, int return_split){
+    printf("\nSplitting cube on dimension ");
+    int i, j, k;
+    if (split_on_dimension == 'i'){
+        printf("\nERROR: Not implemented yet");
+    } else if (split_on_dimension == 'j') {
+        if (return_split) {
+            printf("j, with splitting index %d", split_on_index - 2);
+            int j_start =  split_on_index - 2;
+            printf(", retrieving right side of cube ..");
+            // returning right hand side
+            for (i = 0; i < imax; i++){
+                for (j = j_start; j < jmax; j++){
+                    for (k = 0; k < kmax; k++){
+                        new_cube[i][j - j_start][k] = cube[i][j][k];
+                    }
+                }
+            }
+
+        } else { 
+            printf("j, with splitting index %d", split_on_index);
+            printf(", retrieving left side of cube ..");
+            // returning left hand side
+            for (i = 0; i < imax; i++){
+                for (j = 0; j < split_on_index; j++){
+                    for (k = 0; k < kmax; k++){
+                        new_cube[i][j][k] = cube[i][j][k];
+                    }
+                }
+            }
+        }
+    } else if (split_on_dimension == 'k'){
+        printf("\nERROR: Not implemented yet");
+    } else {
+        printf("ERROR: Dimension not recognized, has to be i, j or k");
+    }
+
+}
