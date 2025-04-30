@@ -77,7 +77,9 @@ void GS_iteration_2_chunks_mpi(int my_rank, int kmax, int my_jmax, int imax, dou
                         +my_phi[i][j+1][k] + my_phi[i+1][j][k])/6.0;
                 }
             }
-        }
+            // same results
+            free(buffer);
+        } 
     }
 }
 

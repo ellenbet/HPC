@@ -62,15 +62,16 @@ int main(int argc, char **argv) {
         // this seems to work
         GS_iteration_2_chunks_mpi(rank, kmax, my_jmax, imax, my_arr);
     } 
+    MPI_Barrier(MPI_COMM_WORLD); // not sure if this is really neccessary, e dist is unchanged and message above still prints last for rank 1
     printf("..done with GS for rank %d!", rank);
 
     // assemble data
-    int total_doubles = imax * (my_jmax) * kmax;
+    int total_doubles = imax * (my_jmax - 2) * kmax;
     // trouble here now
     if (rank == 0){
-        int offset = my_jmax - 2;
+        int offset = my_jmax - 1;
         printf("\nAssembling full matrix..");
-        MPI_Recv((&full_arr[0][0][0]), total_doubles, MPI_DOUBLE, 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        MPI_Recv((&full_arr[0][1][0]), total_doubles, MPI_DOUBLE, 1, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         for (int i = 1; i < imax - 1; i++){
             for (int j = 1; j < my_jmax - 1; j++) {
                 for (int k = 0; k < kmax; k++) {
@@ -85,7 +86,7 @@ int main(int argc, char **argv) {
         }
 
     } else if (rank == 1){
-        MPI_Send(&my_arr[0][0][0], total_doubles, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
+        MPI_Send(&my_arr[0][1][0], total_doubles, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD);
     }
 
 

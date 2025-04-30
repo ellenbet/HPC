@@ -37,23 +37,26 @@ The Gauss–Seidel algorithm can be used for solving systems of linear equations
 ```bash
 ├── mpi_code 
 │    ├── main.c                                  # main program with mpi code
-│    ├── Makefile                                # Build instructions, handles compilation, linking, and cleaning
-│    ├── bin/                                    # Output directory for compiled binaries and object files
-│    ├── src/                                    # Source files for the project's implementation
+│    ├── mpi_tester_main.c                       # tester main, not meant for others to view
+│    ├── Makefile                                # build instructions, handles compilation, linking, and cleaning - set up for 2 processes: -np 2
+│    ├── bin/                                    # output directory for compiled binaries and object files
+│    ├── src/                                    # source files for the project's implementation
 │    │   └── utils.c                             # utility functions                     
-│    ├── include/                                # Header files 
-│    │   └── utils.h                             # Header file corresponding to utils.c           
+│    ├── include/                                # header files 
+│    │   └── utils.h                             # header file corresponding to utils.c           
 │    └── data/   
 └─- serial-code
     ├── main.c                                  # main program with serial code
-    ├── Makefile                                # Build instructions, handles compilation, linking, and cleaning
-    ├── bin/                                    # Output directory for compiled binaries and object files
-    ├── src/                                    # Source files for the project's implementation
+    ├── Makefile                                # build instructions, handles compilation, linking, and cleaning - set up for 1 process: -np 1
+    ├── bin/                                    # output directory for compiled binaries and object files
+    ├── src/                                    # wource files for the project's implementation
     │   └── utils.c                             # utility functions                     
-    ├── include/                                # Header files 
-    │   └── utils.h                             # Header file corresponding to utils.c           
+    ├── include/                                # header files 
+    │   └── utils.h                             # header file corresponding to utils.c           
     └── data/  
 ```
+To link, compile and run ```main.c``` file in either directory, enter said directory and run the following command in your terminal:
 
+- ```make run ARGS="10 10 10 10"```
 
 
