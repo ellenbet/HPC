@@ -15,7 +15,7 @@ int main(int argc, char **argv) {
 
     if (size != 2) {
         if (rank == 0) {
-            printf("ERROR: This program requires 2 MPI processes.\n");
+            printf("ERROR: Program requires 2 MPI processes.\n");
         }
         MPI_Finalize();
         exit(1); 
@@ -23,7 +23,7 @@ int main(int argc, char **argv) {
 
     if (rank == 0) {
         if (argc != 5) {
-            printf("ERROR with intial arguments: %s kmax jmax imax num_iters\n", argv[0]);
+            printf("ERROR: Intial arguments: %s kmax jmax imax num_iters\n", argv[0]);
         }
 
         kmax = atoi(argv[1]);
@@ -43,12 +43,13 @@ int main(int argc, char **argv) {
 
     // local array and full array
     printf("\nAssigning memory to local array..");
-    allocate_array3D(kmax, my_jmax, imax, &my_arr, 0);
+    allocate_array3D(kmax, my_jmax, imax, &my_arr, 0); // final 0 means verbose = 0
     allocate_array3D(kmax, jmax, imax, &full_arr, 0);
 
     // full arrays for serial test and final global
     if (rank == 0) {
         printf("\nAssigning memory to serial and full array in rank 0..");
+        // making to serial arrays to triple check that both serial functions work as they should
         allocate_array3D(kmax, jmax, imax, &serial_arr1, 0);
         allocate_array3D(kmax, jmax, imax, &serial_arr2, 0);
     }
@@ -61,18 +62,19 @@ int main(int argc, char **argv) {
         // this seems to work
         GS_iteration_2_chunks_mpi(rank, kmax, my_jmax, imax, my_arr);
     } 
-    printf("\t..done with GS for rank %d!", rank);
+    printf("..done with GS for rank %d!", rank);
 
     // assemble data
-    int total_doubles = imax * (my_jmax - 1) * kmax;
+    int total_doubles = imax * (my_jmax) * kmax;
     // trouble here now
     if (rank == 0){
+        int offset = my_jmax - 2;
         printf("\nAssembling full matrix..");
         MPI_Recv((&full_arr[0][0][0]), total_doubles, MPI_DOUBLE, 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         for (int i = 1; i < imax - 1; i++){
-            for (int j = 1; j < my_jmax - 2; j++) {
+            for (int j = 1; j < my_jmax - 1; j++) {
                 for (int k = 0; k < kmax; k++) {
-                    full_arr[i][j + my_jmax][k] = my_arr[i][j][k];
+                    full_arr[i][j + offset][k] = my_arr[i][j][k];
                 }
             }
         }
@@ -80,11 +82,9 @@ int main(int argc, char **argv) {
         if (euclidean_distance(kmax, jmax, imax, full_arr, serial_arr1) == 0){
             printf("\n\nERROR: no changes have been made to the full array, exiting program\n");
             return 1;
-
         }
+
     } else if (rank == 1){
-        // since my_jmax = jmax/2 for rank 1 and my_jmax = jmax/2 for rank 0
-        // MPI_Send((&my_arr[i][my_jmax/2][0]), kmax, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
         MPI_Send(&my_arr[0][0][0], total_doubles, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
     }
 

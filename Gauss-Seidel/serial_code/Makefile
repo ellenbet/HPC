@@ -2,9 +2,12 @@
 # Modified for C (instead of C++) 
 
 export C_INCLUDE_PATH = /opt/homebrew/include:/Library/Developer/CommandLineTools/usr/include
+export OMPI_CC = gcc-14
+export TMPDIR = /tmp
 
 # Compiler settings
-CC = gcc-14 # Use GCC for C compilation
+#CC = gcc-14 # Use GCC for C compilation
+CC = mpicc
 CFLAGS = -std=c11 -Wall -I/opt/homebrew/include -I/Library/Developer/CommandLineTools/usr/include -fopenmp
 #CFLAGS += -I/opt/homebrew/Cellar/gcc@12/12.4.0/lib/gcc/12/gcc/aarch64-apple-darwin21/12/include
 #CFLAGS += -I/opt/homebrew/Cellar/gcc@12/12.4.0/lib/gcc/12/gcc/aarch64-apple-darwin21/12/include-fixed
@@ -57,7 +60,7 @@ $(BINDIR)/%.o: $(SRCDIR)/%.c
 # Run the compiled program with optional arguments
 run: $(TARGET)
 	@echo "Running program with arguments: $(ARGS)"
-	./$(TARGET) $(ARGS)
+	mpirun -np 1 ./$(TARGET) $(ARGS)
 
 # Cleanup
 clean:

@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include "include/utils.h" 
 
+// testing main to check if functions work as they should, not meant to be displayed.
+
 int main(int argc, char **argv) {
     int rank, size;
     int kmax, jmax, imax, num_iters;
@@ -34,10 +36,9 @@ int main(int argc, char **argv) {
     allocate_array3D(kmax, jmax, imax, &old, verbose);
     allocate_array3D(kmax, my_jmax, imax, &new_right, verbose);
     allocate_array3D(kmax, my_jmax, imax, &new_left, verbose);
-
     allocate_array3D(kmax, my_jmax, imax, &new_right2, verbose);
 
-    int left_split = 0;
+    int left_split = 0; // not correct anymore
     int right_split = 1;
     split_cube(imax, jmax, kmax, old, new_right, my_jmax, 'j', right_split);
     split_cube(imax, jmax, kmax, old, new_right2, my_jmax, 'j', right_split);
@@ -47,8 +48,8 @@ int main(int argc, char **argv) {
     //print_cube(imax, my_jmax, kmax, new_right);
     //printf("\nSuccess!");
 
-    GS_iteration_2_chunks_mpi(rank, kmax, my_jmax, imax, new_right);
-    GS_iteration_2_chunks(kmax, my_jmax, imax, new_right2);
+    //GS_iteration_2_chunks_mpi(rank, kmax, my_jmax, imax, new_right);
+    //GS_iteration_2_chunks(kmax, my_jmax, imax, new_right2);
 
     printf("euclidian: %f", euclidean_distance(kmax, my_jmax, imax, new_right, new_right2));
 
